@@ -1,0 +1,582 @@
+<!DOCTYPE html>
+<html lang="tl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Surprise Game for Someone Special! 🌷</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+    body {
+      background: linear-gradient(180deg, #ffe6ee 0%, #ffccd5 100%);
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      height: 100vh;
+      width: 100vw;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+    }
+    
+    #canvas-container {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 1;
+    }
+
+    /* Initial Phase */
+    #start-screen {
+      z-index: 10;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 20px;
+      text-align: center;
+      padding: 20px;
+    }
+
+    .title-text {
+      color: #d63384;
+      font-size: 1.5rem;
+      font-weight: bold;
+      text-shadow: 1px 1px 2px rgba(255, 255, 255, 0.8);
+    }
+
+    #surprise-btn {
+      background: linear-gradient(135deg, #ff758c 0%, #ff7eb3 100%);
+      color: white;
+      border: none;
+      border-radius: 50px;
+      padding: 10px 20px;
+      font-size: 14px;
+      font-weight: bold;
+      cursor: pointer;
+      box-shadow: 0 4px 15px rgba(255, 117, 140, 0.4);
+      transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      outline: none;
+      touch-action: manipulation;
+    }
+
+    #surprise-btn:active {
+      transform: scale(0.95) !important;
+    }
+
+    /* Scoreboard */
+    #hud {
+      position: absolute;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 5;
+      background: rgba(255, 255, 255, 0.7);
+      backdrop-filter: blur(5px);
+      padding: 8px 20px;
+      border-radius: 20px;
+      border: 2px solid #ffb3c6;
+      color: #d63384;
+      font-weight: bold;
+      font-size: 1.1rem;
+      display: none;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    }
+
+    /* Click Me Button when Basket is full */
+    #click-me-btn {
+      position: absolute;
+      bottom: 120px;
+      z-index: 20;
+      background: linear-gradient(135deg, #d63384 0%, #e83e8c 100%);
+      color: white;
+      border: 3px solid #fff;
+      border-radius: 50px;
+      padding: 15px 35px;
+      font-size: 1.3rem;
+      font-weight: bold;
+      cursor: pointer;
+      box-shadow: 0 6px 20px rgba(214, 51, 132, 0.5);
+      animation: pulse 1.5s infinite alternate;
+      display: none;
+    }
+
+    @keyframes pulse {
+      0% { transform: scale(1); }
+      100% { transform: scale(1.1); }
+    }
+
+    /* Modal Message */
+    #message-modal {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.4);
+      backdrop-filter: blur(8px);
+      z-index: 30;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .modal-card {
+      background: rgba(255, 255, 255, 0.95);
+      border-radius: 25px;
+      border: 4px solid #ffb3c6;
+      padding: 30px 25px;
+      max-width: 450px;
+      width: 100%;
+      max-height: 85vh;
+      overflow-y: auto;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+      text-align: center;
+      animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+
+    @keyframes popIn {
+      0% { transform: scale(0.5); opacity: 0; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+
+    .modal-card h2 {
+      color: #d63384;
+      margin-bottom: 15px;
+      font-size: 1.5rem;
+    }
+
+    .modal-card p {
+      color: #4a4a4a;
+      line-height: 1.6;
+      font-size: 1rem;
+      margin-bottom: 15px;
+      text-align: left;
+    }
+
+    .close-btn {
+      background: #ff758c;
+      color: white;
+      border: none;
+      padding: 10px 25px;
+      border-radius: 20px;
+      font-weight: bold;
+      cursor: pointer;
+      margin-top: 10px;
+    }
+
+    .hint-text {
+      position: absolute;
+      bottom: 20px;
+      z-index: 5;
+      color: #d63384;
+      font-size: 0.85rem;
+      background: rgba(255,255,255,0.6);
+      padding: 4px 12px;
+      border-radius: 10px;
+      display: none;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Start Screen -->
+  <div id="start-screen">
+    <div class="title-text">May simpleng surprise ako para sa'yo! 💖</div>
+    <button id="surprise-btn">Surprise! 🎁</button>
+  </div>
+
+  <!-- Game HUD -->
+  <div id="hud">Nakasalo: <span id="score">0</span> / 10 🌷</div>
+  <div class="hint-text" id="hint">I-drag o igalaw ang mouse/daliri para igalaw ang pusa! 🐾</div>
+
+  <!-- Canvas Game -->
+  <div id="canvas-container">
+    <canvas id="gameCanvas"></canvas>
+  </div>
+
+  <!-- Final Click Me Button -->
+  <button id="click-me-btn">CLICK ME! 💌</button>
+
+  <!-- Special Message Modal -->
+  <div id="message-modal">
+    <div class="modal-card">
+      <h2>Para sa Pinaka-Special na Babae ✨🌷</h2>
+      <p>
+        <strong>Para sa isang napaka-dedicated, independent, at napakacute na tao:</strong>
+      </p>
+      <p>
+        Gusto ko lang ipaalala sa'yo kung gaano ka kahanga-hanga. Ang sipag mo, ang tibay ng loob mo, at ang galing mong tumayo sa sarili mong mga paa. Kahit gaano man kadami ang pagsubok o gaano man katrabaho ang araw-araw, nakakatuwa na lagi mong nakakayang maging positibo at patuloy na lumaban para sa mga pangarap mo.
+      </p>
+      <p>
+        Huwag mong kakalimutan na okay lang magpahinga kapag napapagod ka. Deserve mo ang lahat ng magagandang bagay at saya sa mundo. Proud na proud ako sa lahat ng pinagsisikapan mo at sa flexibility mong harapin ang kahit ano!
+      </p>
+      <p>
+        Patuloy ka lang maging ikaw — independent, hardworking, strong, at lagi't laging cute! Always remember that you are capable of doing amazing things. Keep shining! 💖✨
+      </p>
+      <button class="close-btn" onclick="document.getElementById('message-modal').style.display='none'">Muli Basahin 💕</button>
+    </div>
+  </div>
+
+  <script>
+    // Button setup
+    const surpriseBtn = document.getElementById('surprise-btn');
+    const startScreen = document.getElementById('start-screen');
+    const hud = document.getElementById('hud');
+    const scoreEl = document.getElementById('score');
+    const hint = document.getElementById('hint');
+    const clickMeBtn = document.getElementById('click-me-btn');
+    const messageModal = document.getElementById('message-modal');
+
+    let clickCount = 0;
+    let btnScale = 1;
+
+    // Canvas setup
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+
+    function resizeCanvas() {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    }
+    resizeCanvas();
+    window.addEventListener('resize', resizeCanvas);
+
+    // Game Variables
+    let gameActive = false;
+    let tulipsCount = 0;
+    const targetTulips = 10;
+    let fallingTulips = [];
+    let caughtTulips = []; // Tulips inside basket
+
+    // Player (Cat & Basket) Object
+    const player = {
+      x: window.innerWidth / 2,
+      y: window.innerHeight - 100,
+      width: 140,
+      height: 120,
+      basketOffsetX: 25,
+      basketOffsetY: -20,
+      basketWidth: 80,
+      basketHeight: 50
+    };
+
+    // Controls
+    let isDragging = false;
+
+    function setPlayerPosition(clientX) {
+      player.x = Math.max(player.width / 2, Math.min(window.innerWidth - player.width / 2, clientX));
+    }
+
+    window.addEventListener('mousemove', (e) => {
+      if (gameActive) setPlayerPosition(e.clientX);
+    });
+
+    window.addEventListener('touchmove', (e) => {
+      if (gameActive && e.touches.length > 0) {
+        setPlayerPosition(e.touches[0].clientX);
+      }
+    }, { passive: true });
+
+    // Step 1: Click Surprise Button 10 Times
+    surpriseBtn.addEventListener('click', () => {
+      clickCount++;
+      btnScale += 0.25;
+      surpriseBtn.style.transform = `scale(${btnScale})`;
+
+      if (clickCount >= 10) {
+        startScreen.style.display = 'none';
+        startGame();
+      }
+    });
+
+    function startGame() {
+      gameActive = true;
+      hud.style.display = 'block';
+      hint.style.display = 'block';
+      spawnTulipLoop();
+      animate();
+    }
+
+    // Tulips Factory
+    function spawnTulip() {
+      if (!gameActive && tulipsCount >= targetTulips) return;
+      
+      const padding = 50;
+      fallingTulips.push({
+        x: Math.random() * (canvas.width - padding * 2) + padding,
+        y: -40,
+        speed: Math.random() * 2 + 2.5,
+        rotation: Math.random() * 0.4 - 0.2,
+        rotSpeed: (Math.random() - 0.5) * 0.02,
+        size: 30
+      });
+    }
+
+    function spawnTulipLoop() {
+      if (tulipsCount < targetTulips) {
+        spawnTulip();
+        setTimeout(spawnTulipLoop, Math.random() * 1000 + 800);
+      }
+    }
+
+    // Main Draw & Animation Loop
+    function animate() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      // 1. Draw Player (Cat + Basket)
+      drawCatWithBasket(player.x, player.y);
+
+      // 2. Draw Falling Tulips & Check Catch
+      if (gameActive) {
+        const basketX = player.x + player.basketOffsetX - player.basketWidth / 2;
+        const basketY = player.y + player.basketOffsetY;
+
+        for (let i = fallingTulips.length - 1; i >= 0; i--) {
+          let t = fallingTulips[i];
+          t.y += t.speed;
+          t.rotation += t.rotSpeed;
+
+          drawTulip(t.x, t.y, t.size, t.rotation);
+
+          // Collision Detection with Basket
+          if (
+            t.y >= basketY && 
+            t.y <= basketY + player.basketHeight &&
+            t.x >= basketX && 
+            t.x <= basketX + player.basketWidth
+          ) {
+            // Caught!
+            tulipsCount++;
+            scoreEl.textContent = Math.min(tulipsCount, targetTulips);
+
+            // Add relative position to basket
+            caughtTulips.push({
+              relX: t.x - (player.x + player.basketOffsetX),
+              relY: Math.random() * 15 - 25, // Pile up inside
+              size: 25,
+              rotation: Math.random() * 0.6 - 0.3
+            });
+
+            fallingTulips.splice(i, 1);
+
+            // Check Win Condition
+            if (tulipsCount >= targetTulips) {
+              setTimeout(showClickMeButton, 800);
+            }
+          } else if (t.y > canvas.height + 50) {
+            // Respawn missed tulip if target not reached
+            fallingTulips.splice(i, 1);
+            if (tulipsCount < targetTulips) {
+              setTimeout(spawnTulip, 500);
+            }
+          }
+        }
+      }
+
+      requestAnimationFrame(animate);
+    }
+
+    // Helper: Draw Tulip Flower
+    function drawTulip(x, y, size, rotation) {
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.rotate(rotation);
+
+      // Stem
+      ctx.beginPath();
+      ctx.strokeStyle = '#70e000';
+      ctx.lineWidth = 3;
+      ctx.moveTo(0, 0);
+      ctx.quadraticCurveTo(-5, size * 0.6, 0, size);
+      ctx.stroke();
+
+      // Petals (Pink Tulip)
+      ctx.fillStyle = '#ff4d6d';
+      
+      // Left Petal
+      ctx.beginPath();
+      ctx.ellipse(-size*0.2, -size*0.3, size*0.3, size*0.45, -0.2, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Right Petal
+      ctx.beginPath();
+      ctx.ellipse(size*0.2, -size*0.3, size*0.3, size*0.45, 0.2, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Center Main Petal
+      ctx.fillStyle = '#ff758c';
+      ctx.beginPath();
+      ctx.ellipse(0, -size*0.35, size*0.3, size*0.5, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.restore();
+    }
+
+    // Helper: Draw Cat Holding Basket
+    function drawCatWithBasket(x, y) {
+      ctx.save();
+      ctx.translate(x, y);
+
+      // Cat Body (Cute Grey/White Cat)
+      ctx.fillStyle = '#d3d3d3';
+
+      // Tail
+      ctx.beginPath();
+      ctx.lineWidth = 8;
+      ctx.strokeStyle = '#d3d3d3';
+      ctx.lineCap = 'round';
+      ctx.moveTo(-40, 20);
+      ctx.quadraticCurveTo(-60, 0, -50, -20);
+      ctx.stroke();
+
+      // Body Base
+      ctx.beginPath();
+      ctx.ellipse(-20, 20, 35, 30, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Head
+      ctx.beginPath();
+      ctx.arc(-25, -25, 28, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Ears
+      ctx.fillStyle = '#d3d3d3';
+      // Left Ear
+      ctx.beginPath();
+      ctx.moveTo(-45, -40);
+      ctx.lineTo(-35, -60);
+      ctx.lineTo(-20, -45);
+      ctx.fill();
+      // Right Ear
+      ctx.beginPath();
+      ctx.moveTo(-25, -45);
+      ctx.lineTo(-10, -60);
+      ctx.lineTo(-0, -40);
+      ctx.fill();
+
+      // Inner Ears (Pink)
+      ctx.fillStyle = '#ffb3c6';
+      ctx.beginPath();
+      ctx.moveTo(-40, -43);
+      ctx.lineTo(-35, -53);
+      ctx.lineTo(-25, -46);
+      ctx.fill();
+      
+      ctx.beginPath();
+      ctx.moveTo(-22, -46);
+      ctx.lineTo(-10, -53);
+      ctx.lineTo(-5, -42);
+      ctx.fill();
+
+      // Face Features
+      // Eyes (Happy Arcs)
+      ctx.strokeStyle = '#4a4a4a';
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.arc(-35, -28, 4, Math.PI, 0);
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.arc(-15, -28, 4, Math.PI, 0);
+      ctx.stroke();
+
+      // Nose & Mouth
+      ctx.fillStyle = '#ff758c';
+      ctx.beginPath();
+      ctx.arc(-25, -20, 2.5, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Blush
+      ctx.fillStyle = 'rgba(255, 117, 140, 0.4)';
+      ctx.beginPath();
+      ctx.arc(-40, -20, 5, 0, Math.PI * 2);
+      ctx.arc(-10, -20, 5, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Whiskers
+      ctx.strokeStyle = '#a0a0a0';
+      ctx.lineWidth = 1.5;
+      // Left whiskers
+      ctx.beginPath();
+      ctx.moveTo(-48, -22); ctx.lineTo(-60, -25);
+      ctx.moveTo(-48, -18); ctx.lineTo(-60, -18);
+      ctx.stroke();
+      // Right whiskers
+      ctx.beginPath();
+      ctx.moveTo(-2, -22); ctx.lineTo(10, -25);
+      ctx.moveTo(-2, -18); ctx.lineTo(10, -18);
+      ctx.stroke();
+
+      // Paws Holding Basket
+      ctx.fillStyle = '#e6e6e6';
+      ctx.beginPath();
+      ctx.arc(0, 0, 10, 0, Math.PI * 2); // Paw holding basket left
+      ctx.arc(45, 0, 10, 0, Math.PI * 2); // Paw holding basket right
+      ctx.fill();
+
+      // --- BASKET ---
+      const bx = player.basketOffsetX;
+      const by = player.basketOffsetY;
+      const bw = player.basketWidth;
+      const bh = player.basketHeight;
+
+      // Basket Back Rim
+      ctx.fillStyle = '#b5835a';
+      ctx.beginPath();
+      ctx.ellipse(bx, by, bw / 2, bh / 3, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Draw Caught Tulips INSIDE Basket
+      caughtTulips.forEach(t => {
+        drawTulip(bx + t.relX, by + t.relY, t.size, t.rotation);
+      });
+
+      // Basket Body
+      ctx.fillStyle = '#dd9a66';
+      ctx.beginPath();
+      ctx.moveTo(bx - bw / 2, by);
+      ctx.quadraticCurveTo(bx - bw / 2 + 5, by + bh, bx, by + bh);
+      ctx.quadraticCurveTo(bx + bw / 2 - 5, by + bh, bx + bw / 2, by);
+      ctx.fill();
+
+      // Basket Woven Texture Lines
+      ctx.strokeStyle = '#8d5b34';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(bx - bw / 2 + 5, by + 10);
+      ctx.lineTo(bx + bw / 2 - 5, by + 10);
+      ctx.moveTo(bx - bw / 2 + 10, by + 25);
+      ctx.lineTo(bx + bw / 2 - 10, by + 25);
+      ctx.stroke();
+
+      // Basket Front Rim
+      ctx.fillStyle = '#c68b59';
+      ctx.beginPath();
+      ctx.ellipse(bx, by, bw / 2, 8, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.restore();
+    }
+
+    // Show final trigger button
+    function showClickMeButton() {
+      clickMeBtn.style.display = 'block';
+    }
+
+    // Open Modal Message
+    clickMeBtn.addEventListener('click', () => {
+      messageModal.style.display = 'flex';
+    });
+  </script>
+</body>
+</html>
